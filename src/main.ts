@@ -18,7 +18,7 @@ import corsOptionsDelegate from './core';
 
 // 1
 export const IS_DEV = process.env.NODE_ENV !== 'production';
-const PORT = process.env.PORT || 9528;
+const PORT = process.env.PORT || 3000;
 const PREFIX = process.env.PREFIX || '/';
 
 const startTime = new Date().getTime();
