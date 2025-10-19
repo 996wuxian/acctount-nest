@@ -21,8 +21,8 @@ export class Review {
   @Column({ type: 'int', unsigned: true })
   userId: number;
 
-  @Column({ type: 'int', unsigned: true })
-  rating: number;
+  @Column({ type: 'int', unsigned: true, nullable: true })
+  rating?: number | null;
 
   @Column({ type: 'text' })
   content: string;

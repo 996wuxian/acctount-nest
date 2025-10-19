@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Review } from './entities/review.entity';
@@ -17,6 +18,9 @@ export class ReviewService {
   ) {}
 
   async create(dto: CreateReviewDto, userId: number, ip?: string) {
+    if (userId == null) {
+      throw new UnauthorizedException('用户未认证或令牌不包含用户ID');
+    }
     if (dto.rating < 1 || dto.rating > 5) {
       throw new BadRequestException('评分必须在 1 到 5 之间');
     }
@@ -47,6 +51,9 @@ export class ReviewService {
     parentId: number,
     ip?: string,
   ) {
+    if (userId == null) {
+      throw new UnauthorizedException('用户未认证或令牌不包含用户ID');
+    }
     const parent = await this.reviewRepo.findOne({
       where: { id: parentId },
       relations: ['parent'],
@@ -73,6 +80,8 @@ export class ReviewService {
       content: dto.content,
       parent,
       ip,
+      // 回复不需要评分
+      rating: null,
     });
     return this.reviewRepo.save(reply);
   }

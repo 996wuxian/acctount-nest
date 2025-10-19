@@ -52,7 +52,7 @@ export class ReviewController {
     @Body() dto: ReplyReviewDto,
     @Req() req: any,
   ) {
-    const userId = req.user?.sub;
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     const ip = this.getClientIp(req);
     return this.reviewService.reply(dto, userId, parentId, ip);
   }
@@ -68,7 +68,7 @@ export class ReviewController {
   @ApiOkResponse({ description: '创建成功，返回评价对象' })
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   create(@Body() dto: CreateReviewDto, @Req() req: any) {
-    const userId = req.user?.sub;
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     const ip = this.getClientIp(req);
     return this.reviewService.create(dto, userId, ip);
   }
