@@ -35,7 +35,8 @@ export class ReviewService {
     }
 
     const review = this.reviewRepo.create({
-      userId,
+      // 使用关系字段，TypeORM会写入 userId 外键
+      user: { id: userId } as any,
       rating: dto.rating,
       content: dto.content,
       ip,
@@ -76,7 +77,8 @@ export class ReviewService {
 
     const reply = this.reviewRepo.create({
       messageId: parent.messageId,
-      userId,
+      // 使用关系字段
+      user: { id: userId } as any,
       content: dto.content,
       parent,
       ip,
@@ -90,6 +92,8 @@ export class ReviewService {
     return this.reviewRepo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
       .where('r.messageId = :messageId', { messageId })
       .andWhere('r.parent_id IS NULL')
       .orderBy('r.created_at', 'ASC')
@@ -101,6 +105,8 @@ export class ReviewService {
     return this.reviewRepo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
       .where('r.parent_id IS NULL')
       .orderBy('r.created_at', 'ASC')
       .addOrderBy('c.created_at', 'ASC')
@@ -111,6 +117,8 @@ export class ReviewService {
     const review = await this.reviewRepo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
       .where('r.id = :id', { id })
       .orderBy('c.created_at', 'ASC')
       .getOne();
