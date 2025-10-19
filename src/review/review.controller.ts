@@ -12,6 +12,7 @@ import {
   UseGuards,
   Req,
   Delete,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ReviewService } from './review.service';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -25,6 +26,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../core/jwt-auth.guard';
+import { isIpBlacklisted } from '../utils/ip-blacklist';
 
 @Controller('review')
 @ApiTags('Review')
@@ -54,6 +56,9 @@ export class ReviewController {
   ) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     const ip = this.getClientIp(req);
+    if (ip && isIpBlacklisted(ip)) {
+      throw new ForbiddenException('您的留言功能已被封禁');
+    }
     return this.reviewService.reply(dto, userId, parentId, ip);
   }
 
@@ -70,6 +75,9 @@ export class ReviewController {
   create(@Body() dto: CreateReviewDto, @Req() req: any) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     const ip = this.getClientIp(req);
+    if (ip && isIpBlacklisted(ip)) {
+      throw new ForbiddenException('您的留言功能已被封禁');
+    }
     return this.reviewService.create(dto, userId, ip);
   }
 

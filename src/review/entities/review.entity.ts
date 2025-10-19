@@ -29,12 +29,6 @@ export class Review {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'varchar', length: 45, nullable: true })
-  ip?: string;
-
-  @Column({ type: 'boolean', default: false })
-  isBanned: boolean;
-
   @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt: Date;
 

@@ -10,11 +10,13 @@ import { Review } from './entities/review.entity';
 import { Repository } from 'typeorm';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReplyReviewDto } from './dto/reply-review.dto';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class ReviewService {
   constructor(
     @InjectRepository(Review) private readonly reviewRepo: Repository<Review>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
   async create(dto: CreateReviewDto, userId: number, ip?: string) {
@@ -25,21 +27,21 @@ export class ReviewService {
       throw new BadRequestException('评分必须在 1 到 5 之间');
     }
 
-    if (ip) {
-      const bannedCount = await this.reviewRepo.count({
-        where: { ip, isBanned: true },
-      });
-      if (bannedCount > 0) {
-        throw new ForbiddenException('该IP已被封禁，无法评论');
-      }
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('用户不存在或未认证');
+    }
+    if (user.isBanned) {
+      throw new ForbiddenException('该用户已被封禁，无法评论');
+    }
+    if (ip && user.ip !== ip) {
+      await this.userRepo.update(user.id, { ip });
     }
 
     const review = this.reviewRepo.create({
-      // 使用关系字段，TypeORM会写入 userId 外键
       user: { id: userId } as any,
       rating: dto.rating,
       content: dto.content,
-      ip,
     });
     const saved = await this.reviewRepo.save(review);
     await this.reviewRepo.update(saved.id, { messageId: saved.id });
@@ -55,6 +57,18 @@ export class ReviewService {
     if (userId == null) {
       throw new UnauthorizedException('用户未认证或令牌不包含用户ID');
     }
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('用户不存在或未认证');
+    }
+    if (user.isBanned) {
+      throw new ForbiddenException('该用户已被封禁，无法评论');
+    }
+    if (ip && user.ip !== ip) {
+      await this.userRepo.update(user.id, { ip });
+    }
+
     const parent = await this.reviewRepo.findOne({
       where: { id: parentId },
       relations: ['parent'],
@@ -66,22 +80,11 @@ export class ReviewService {
       throw new BadRequestException('只允许回复根评价，不能对回复继续回复');
     }
 
-    if (ip) {
-      const bannedCount = await this.reviewRepo.count({
-        where: { ip, isBanned: true },
-      });
-      if (bannedCount > 0) {
-        throw new ForbiddenException('该IP已被封禁，无法评论');
-      }
-    }
-
     const reply = this.reviewRepo.create({
       messageId: parent.messageId,
-      // 使用关系字段
       user: { id: userId } as any,
       content: dto.content,
       parent,
-      ip,
       // 回复不需要评分
       rating: null,
     });

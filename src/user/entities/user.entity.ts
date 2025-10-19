@@ -27,6 +27,12 @@ export class User {
   @Column({ type: 'tinyint', default: false })
   isVip: boolean;
 
+  @Column({ type: 'varchar', length: 45, nullable: true })
+  ip?: string;
+
+  @Column({ type: 'tinyint', default: false })
+  isBanned: boolean;
+
   @CreateDateColumn({ name: 'register_time', type: 'datetime' })
   registerTime: Date;
 }
