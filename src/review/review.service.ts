@@ -32,7 +32,7 @@ export class ReviewService {
       throw new UnauthorizedException('用户不存在或未认证');
     }
     if (user.isBanned) {
-      throw new ForbiddenException('该用户已被封禁，无法评论');
+      throw new ForbiddenException('您已被封禁，无法评论');
     }
     if (ip && user.ip !== ip) {
       await this.userRepo.update(user.id, { ip });
