@@ -19,23 +19,44 @@ export class UserService {
   ) {}
 
   async register(createUserDto: CreateUserDto) {
-    const user = this.userRepo.create({
+    // 第一步：插入用户，仅含必填字段
+    const insertResult = await this.userRepo.insert({
       nickname: createUserDto.nickname,
       password: createUserDto.password,
       isVip: false,
     });
-    const saved = await this.userRepo.save(user);
+
+    // 可靠获取新用户 id（兼容不同驱动）
+    const idCandidate =
+      (insertResult.identifiers?.[0]?.id as number | undefined) ??
+      (insertResult.raw?.insertId as number | undefined);
+
+    const id = Number(idCandidate);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new Error('注册失败：无法获取有效的用户ID');
+    }
+
+    // 第二步：计算并更新账号
     const base = 10000000;
-    const account = base + saved.id - 1;
-    await this.userRepo.update(saved.id, { account });
+    const account = base + id - 1;
+
+    await this.userRepo.update(id, { account });
+
+    // 返回分配的账号
     return { account };
   }
 
   async login(dto: LoginUserDto) {
+    // 显式数值校验，杜绝 NaN 进入 SQL
+    const accountNum = Number(dto.account);
+    if (!Number.isInteger(accountNum) || accountNum <= 0) {
+      throw new Error('账号格式不正确');
+    }
+
     const user = await this.userRepo
       .createQueryBuilder('user')
       .addSelect('user.password')
-      .where('user.account = :account', { account: dto.account })
+      .where('user.account = :account', { account: accountNum })
       .getOne();
 
     if (!user) {
