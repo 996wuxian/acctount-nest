@@ -14,6 +14,8 @@ import {
   Query,
   NotFoundException,
   ParseIntPipe,
+  UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -214,5 +216,60 @@ export class UserController {
   @ApiOkResponse({ description: '删除成功' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.userService.remove(id);
+  }
+
+  @Post('nickname')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '修改昵称（根据 token 中的账号）',
+    description: '从 Authorization Bearer token 中解析账号，根据账号更新昵称',
+  })
+  @ApiOkResponse({
+    description: '修改成功',
+    schema: {
+      type: 'object',
+      properties: {
+        account: { type: 'integer', example: 10000000 },
+        nickname: { type: 'string', example: '新的昵称' },
+      },
+    },
+  })
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  async updateNickname(
+    @Req() req: Request,
+    @Body()
+    dto: {
+      nickname: string;
+    },
+  ) {
+    const auth = req.headers['authorization'];
+    if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) {
+      throw new UnauthorizedException('缺少或无效的授权信息');
+    }
+    // 参考其他接口，直接解码 JWT payload
+    let account: number | undefined;
+    try {
+      const token = auth.slice(7);
+      const payloadStr = Buffer.from(token.split('.')[1], 'base64').toString(
+        'utf8',
+      );
+      const payload = JSON.parse(payloadStr);
+      const acc = Number(payload?.account);
+      if (Number.isInteger(acc) && acc > 0) {
+        account = acc;
+      }
+    } catch {
+      // ignore
+    }
+    if (!account) {
+      throw new UnauthorizedException('无法解析 token 中的账号');
+    }
+
+    const nickname = String(dto?.nickname ?? '').trim();
+    if (!nickname) {
+      throw new BadRequestException('昵称不能为空');
+    }
+
+    return this.userService.updateNicknameByAccount(account, nickname);
   }
 }

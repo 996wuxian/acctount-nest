@@ -99,4 +99,25 @@ export class UserService {
   remove(id: number) {
     return `This action removes a #${id} user`;
   }
+
+  async updateNicknameByAccount(account: number, nickname: string) {
+    const acc = Number(account);
+    if (!Number.isInteger(acc) || acc <= 0) {
+      throw new Error('账号格式不正确');
+    }
+    const name = String(nickname ?? '').trim();
+    if (!name) {
+      throw new Error('昵称不能为空');
+    }
+
+    const result = await this.userRepo.update(
+      { account: acc },
+      { nickname: name },
+    );
+    if (!result.affected || result.affected < 1) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    return { account: acc, nickname: name };
+  }
 }
