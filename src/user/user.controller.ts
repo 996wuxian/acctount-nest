@@ -246,7 +246,6 @@ export class UserController {
     if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) {
       throw new UnauthorizedException('缺少或无效的授权信息');
     }
-    // 参考其他接口，直接解码 JWT payload
     let account: number | undefined;
     try {
       const token = auth.slice(7);
@@ -258,9 +257,7 @@ export class UserController {
       if (Number.isInteger(acc) && acc > 0) {
         account = acc;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     if (!account) {
       throw new UnauthorizedException('无法解析 token 中的账号');
     }
@@ -271,5 +268,34 @@ export class UserController {
     }
 
     return this.userService.updateNicknameByAccount(account, nickname);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '退出登录（根据 token 中的账号）' })
+  @ApiOkResponse({
+    description: '退出成功，登录数减 1（不小于 0）',
+  })
+  async logout(@Req() req: Request) {
+    const auth = req.headers['authorization'];
+    if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) {
+      throw new UnauthorizedException('缺少或无效的授权信息');
+    }
+    let account: number | undefined;
+    try {
+      const token = auth.slice(7);
+      const payloadStr = Buffer.from(token.split('.')[1], 'base64').toString(
+        'utf8',
+      );
+      const payload = JSON.parse(payloadStr);
+      const acc = Number(payload?.account);
+      if (Number.isInteger(acc) && acc > 0) {
+        account = acc;
+      }
+    } catch {}
+    if (!account) {
+      throw new UnauthorizedException('无法解析 token 中的账号');
+    }
+    return this.userService.logoutByAccount(account);
   }
 }

@@ -66,6 +66,18 @@ export class UserService {
       throw new UnauthorizedException('账号或密码错误');
     }
 
+    // 设备登录数限制：已达 3 则拒绝登录
+    if ((user.loginCount ?? 0) >= 3) {
+      throw new UnauthorizedException('登录设备过多，请退出一些设备后登录');
+    }
+    // 成功登录则自增登录数
+    await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set({ loginCount: () => 'loginCount + 1' })
+      .where('id = :id', { id: user.id })
+      .execute();
+
     const token = await this.jwtService.signAsync({
       sub: user.id,
       account: user.account,
@@ -119,5 +131,20 @@ export class UserService {
     }
 
     return { account: acc, nickname: name };
+  }
+
+  async logoutByAccount(account: number) {
+    const acc = Number(account);
+    if (!Number.isInteger(acc) || acc <= 0) {
+      throw new UnauthorizedException('账号格式不正确');
+    }
+    const user = await this.userRepo.findOne({ where: { account: acc } });
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    const next = Math.max(0, (user.loginCount ?? 0) - 1);
+    await this.userRepo.update({ id: user.id }, { loginCount: next });
+    return { account: acc, loginCount: next };
   }
 }

@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'tinyint', default: false })
   isVip: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  loginCount: number;
+
   @Column({ type: 'varchar', length: 45, nullable: true })
   ip?: string;
 
