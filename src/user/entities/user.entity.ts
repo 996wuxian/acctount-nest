@@ -30,6 +30,9 @@ export class User {
   @Column({ type: 'int', default: 0 })
   loginCount: number;
 
+  @Column({ type: 'tinyint', default: 0 })
+  chatNum: number;
+
   @Column({ type: 'varchar', length: 45, nullable: true })
   ip?: string;
 
