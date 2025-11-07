@@ -119,6 +119,106 @@ export class UserController {
     return { isLatest: false, latestVersion, date, content, url: downloadUrl };
   }
 
+  // 新增：另一个 APP 的版本查询（读取 record-package）
+  @Get('record-apk')
+  @ApiOperation({
+    summary: '获取另一个 APP 最新 APK（返回储存桶 URL）',
+    description:
+      '读取 record-package/release.json，比对 ?version；一致返回“已是最新”；不一致返回储存桶下载 URL、最新版本、日期与更新内容',
+  })
+  @ApiOkResponse({
+    description: '返回最新版本信息或储存桶下载地址',
+    schema: {
+      type: 'object',
+      properties: {
+        isLatest: { type: 'boolean', example: false },
+        latestVersion: { type: 'string', example: '2.9.0' },
+        date: { type: 'string', example: '2025-10-21' },
+        content: { type: 'array', items: { type: 'string' } },
+        url: {
+          type: 'string',
+          example: 'http://dx.jcw2.cn/record-2.9.0_anzhuo.apk',
+        },
+        message: { type: 'string', example: '已经是最新版本' },
+      },
+    },
+  })
+  @ApiQuery({ name: 'version', required: false, description: '客户端当前版本' })
+  recordApk(
+    @Req() req: Request,
+    @Query('version') version?: string,
+  ): Record<string, any> {
+    const assetsDir = path.resolve(__dirname, '../../record-package');
+    const releasePath = path.join(assetsDir, 'release.json');
+
+    if (!existsSync(releasePath)) {
+      throw new NotFoundException(
+        '缺少 record-package/release.json，无法确定 APK 版本',
+      );
+    }
+
+    let release: {
+      version?: string;
+      date?: string;
+      content?: string[];
+      apkFileName?: string;
+      fileName?: string;
+    };
+    try {
+      release = JSON.parse(readFileSync(releasePath, 'utf8'));
+    } catch {
+      throw new NotFoundException('record-package/release.json 格式错误');
+    }
+
+    const latestVersion = String(release.version ?? '').trim();
+    const date = release.date ?? null;
+    const content = Array.isArray(release.content) ? release.content : [];
+
+    const normalizeVersion = (v?: string) =>
+      String(v ?? '')
+        .trim()
+        .replace(/^v/i, '');
+    const clientVersionRaw =
+      version ??
+      (req.query['v'] as string | undefined) ??
+      (req.query['ver'] as string | undefined);
+    const isLatest =
+      !!latestVersion &&
+      normalizeVersion(clientVersionRaw) === normalizeVersion(latestVersion);
+
+    const bucketBase = (
+      process.env.RECORD_APK_BUCKET_BASE ?? 'http://dx.jcw2.cn'
+    ).replace(/\/+$/, '');
+
+    const explicitFile =
+      (release as any)?.apkFileName || (release as any)?.fileName;
+
+    if (!latestVersion && !explicitFile) {
+      throw new NotFoundException('release.json 缺少 version 或文件名信息');
+    }
+
+    const apkFileName = explicitFile ?? `record-${latestVersion}_anzhuo.apk`;
+    const downloadUrl = `${bucketBase}/${apkFileName}`;
+
+    if (isLatest) {
+      return {
+        isLatest: true,
+        latestVersion,
+        date,
+        content,
+        message: '已经是最新版本',
+      };
+    }
+
+    return {
+      isLatest: false,
+      latestVersion,
+      date,
+      content,
+      url: downloadUrl,
+    };
+  }
+
   @Post('register')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
