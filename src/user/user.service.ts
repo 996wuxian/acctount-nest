@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -21,6 +23,16 @@ export class UserService {
   async register(createUserDto: CreateUserDto, ip?: string) {
     const ipSafe =
       typeof ip === 'string' && ip.trim() ? ip.trim().slice(0, 45) : null;
+
+    if (ipSafe) {
+      const count = await this.userRepo.count({ where: { ip: ipSafe } });
+      if (count >= 2) {
+        throw new HttpException(
+          '请不要频繁注册。',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
 
     // 第一步：插入用户，仅含必填字段
     const insertResult = await this.userRepo.insert({

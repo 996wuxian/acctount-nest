@@ -252,6 +252,15 @@ export class UserController {
     return this.userService.register(createUserDto, ip);
   }
 
+  @Post()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '创建用户（同注册）' })
+  @ApiOkResponse({ description: '创建成功' })
+  create(@Body() createUserDto: CreateUserDto, @Req() req: Request) {
+    const ip = this.getClientIp(req);
+    return this.userService.register(createUserDto, ip);
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -287,15 +296,6 @@ export class UserController {
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   login(@Body() dto: LoginUserDto) {
     return this.userService.login(dto);
-  }
-
-  @Post()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '创建用户（同注册）' })
-  @ApiOkResponse({ description: '创建成功' })
-  create(@Body() createUserDto: CreateUserDto, @Req() req: Request) {
-    const ip = this.getClientIp(req);
-    return this.userService.register(createUserDto, ip);
   }
 
   @Get()
