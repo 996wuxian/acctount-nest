@@ -18,12 +18,16 @@ export class UserService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(createUserDto: CreateUserDto) {
+  async register(createUserDto: CreateUserDto, ip?: string) {
+    const ipSafe =
+      typeof ip === 'string' && ip.trim() ? ip.trim().slice(0, 45) : null;
+
     // 第一步：插入用户，仅含必填字段
     const insertResult = await this.userRepo.insert({
       nickname: createUserDto.nickname,
       password: createUserDto.password,
       isVip: false,
+      ip: ipSafe,
     });
 
     // 可靠获取新用户 id（兼容不同驱动）

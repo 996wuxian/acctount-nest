@@ -219,6 +219,17 @@ export class UserController {
     };
   }
 
+  private getClientIp(req: any): string | undefined {
+    const forwarded = (req.headers['x-forwarded-for'] as string) || '';
+    const ip = forwarded.split(',')[0]?.trim();
+    return (
+      ip ||
+      (req.ip as string) ||
+      req.socket?.remoteAddress ||
+      req.connection?.remoteAddress
+    );
+  }
+
   @Post('register')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -236,8 +247,9 @@ export class UserController {
     },
   })
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
-  register(@Body() createUserDto: CreateUserDto) {
-    return this.userService.register(createUserDto);
+  register(@Body() createUserDto: CreateUserDto, @Req() req: Request) {
+    const ip = this.getClientIp(req);
+    return this.userService.register(createUserDto, ip);
   }
 
   @Post('login')
@@ -281,8 +293,9 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '创建用户（同注册）' })
   @ApiOkResponse({ description: '创建成功' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  create(@Body() createUserDto: CreateUserDto, @Req() req: Request) {
+    const ip = this.getClientIp(req);
+    return this.userService.register(createUserDto, ip);
   }
 
   @Get()
