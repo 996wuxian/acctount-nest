@@ -8,6 +8,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 
 @Entity({ name: 'record_review' })
 export class RecordReview {
@@ -17,6 +18,10 @@ export class RecordReview {
   @Index('idx_record_review_message')
   @Column({ type: 'int', unsigned: true, nullable: true })
   messageId: number | null;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
+  user?: User;
 
   @Column({ type: 'int', unsigned: true, nullable: true })
   rating?: number | null;

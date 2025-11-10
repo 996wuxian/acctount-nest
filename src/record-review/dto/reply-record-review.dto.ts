@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length } from 'class-validator';
+import { IsString, Length, IsOptional, IsInt } from 'class-validator';
 
 export class ReplyRecordReviewDto {
   @ApiProperty({
@@ -11,4 +11,9 @@ export class ReplyRecordReviewDto {
   @IsString()
   @Length(1, 1000)
   content: string;
+
+  @ApiProperty({ description: '评论者用户ID', example: 1, required: false })
+  @IsOptional()
+  @IsInt()
+  userId?: number;
 }

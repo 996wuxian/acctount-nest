@@ -24,11 +24,15 @@ import { isIpBlacklisted } from '../utils/ip-blacklist';
 import { RecordReviewService } from './record-review.service';
 import { CreateRecordReviewDto } from './dto/create-record-review.dto';
 import { ReplyRecordReviewDto } from './dto/reply-record-review.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('record-review')
 @ApiTags('RecordReview')
 export class RecordReviewController {
-  constructor(private readonly service: RecordReviewService) {}
+  constructor(
+    private readonly service: RecordReviewService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post(':parentId/reply')
   @HttpCode(HttpStatus.OK)
@@ -49,7 +53,8 @@ export class RecordReviewController {
     if (ip && isIpBlacklisted(ip)) {
       throw new ForbiddenException('您的留言功能已被封禁');
     }
-    return this.service.reply(dto, parentId, ip);
+    const userId = this.tryGetUserId(req);
+    return this.service.reply(dto, parentId, ip, userId);
   }
 
   @Post()
@@ -66,7 +71,8 @@ export class RecordReviewController {
     if (ip && isIpBlacklisted(ip)) {
       throw new ForbiddenException('您的留言功能已被封禁');
     }
-    return this.service.create(dto, ip);
+    const userId = this.tryGetUserId(req);
+    return this.service.create(dto, ip, userId);
   }
 
   @Get('messages')
@@ -124,5 +130,20 @@ export class RecordReviewController {
     return (
       ip || req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress
     );
+  }
+
+  private tryGetUserId(req: any): number | undefined {
+    const auth = req.headers?.authorization as string | undefined;
+    if (!auth) return undefined;
+    const [type, token] = auth.split(' ');
+    if (type !== 'Bearer' || !token) return undefined;
+    try {
+      const payload: any = this.jwtService.verify(token); // 使用 JwtModule.register 的 secret
+      const id = payload?.sub ?? payload?.id ?? payload?.userId;
+      return typeof id === 'number' ? id : Number(id) || undefined;
+    } catch {
+      // token 无效/过期，按游客处理
+      return undefined;
+    }
   }
 }

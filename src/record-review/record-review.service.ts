@@ -16,24 +16,34 @@ export class RecordReviewService {
     private readonly repo: Repository<RecordReview>,
   ) {}
 
-  async create(dto: CreateRecordReviewDto, ip?: string) {
+  async create(dto: CreateRecordReviewDto, ip?: string, userId?: number) {
     if (dto.rating < 1 || dto.rating > 5) {
       throw new BadRequestException('评分必须在 1 到 5 之间');
     }
     const review = this.repo.create({
+      user: userId ? ({ id: userId } as any) : undefined,
       rating: dto.rating,
       content: dto.content,
       ip: ip?.trim().slice(0, 45) || null,
     });
     const saved = await this.repo.save(review);
     await this.repo.update(saved.id, { messageId: saved.id });
-    return this.repo.findOne({
-      where: { id: saved.id },
-      relations: ['children'],
-    });
+    return this.repo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
+      .where('r.id = :id', { id: saved.id })
+      .orderBy('c.created_at', 'ASC')
+      .getOne();
   }
 
-  async reply(dto: ReplyRecordReviewDto, parentId: number, ip?: string) {
+  async reply(
+    dto: ReplyRecordReviewDto,
+    parentId: number,
+    ip?: string,
+    userId?: number,
+  ) {
     const parent = await this.repo.findOne({
       where: { id: parentId },
       relations: ['parent'],
@@ -46,18 +56,26 @@ export class RecordReviewService {
     }
     const reply = this.repo.create({
       messageId: parent.messageId,
+      user: userId ? ({ id: userId } as any) : undefined,
       content: dto.content,
       parent,
       rating: null,
       ip: ip?.trim().slice(0, 45) || null,
     });
-    return this.repo.save(reply);
+    const saved = await this.repo.save(reply);
+    return this.repo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'ru')
+      .where('r.id = :id', { id: saved.id })
+      .getOne();
   }
 
   async findByMessage(messageId: number) {
     return this.repo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
       .where('r.messageId = :messageId', { messageId })
       .andWhere('r.parent_id IS NULL')
       .orderBy('r.created_at', 'ASC')
@@ -69,6 +87,8 @@ export class RecordReviewService {
     return this.repo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
       .where('r.parent_id IS NULL')
       .orderBy('r.created_at', 'ASC')
       .addOrderBy('c.created_at', 'ASC')
@@ -79,9 +99,12 @@ export class RecordReviewService {
     const review = await this.repo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.children', 'c')
+      .leftJoinAndSelect('r.user', 'ru')
+      .leftJoinAndSelect('c.user', 'cu')
       .where('r.id = :id', { id })
       .orderBy('c.created_at', 'ASC')
       .getOne();
+
     if (!review) {
       throw new NotFoundException('评价不存在');
     }
