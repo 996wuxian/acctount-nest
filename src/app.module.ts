@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { ReviewModule } from './review/review.module';
 import { ExportModule } from './export/export.module';
 import { RecordReviewModule } from './record-review/record-review.module';
+import { FoodReviewModule } from './food-review/food-review.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RecordReviewModule } from './record-review/record-review.module';
     ReviewModule,
     ExportModule,
     RecordReviewModule,
+    FoodReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],
