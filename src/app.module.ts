@@ -8,6 +8,7 @@ import { ReviewModule } from './review/review.module';
 import { ExportModule } from './export/export.module';
 import { RecordReviewModule } from './record-review/record-review.module';
 import { FoodReviewModule } from './food-review/food-review.module';
+import { MemberApplyModule } from './member-apply/member-apply.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { FoodReviewModule } from './food-review/food-review.module';
     ExportModule,
     RecordReviewModule,
     FoodReviewModule,
+    MemberApplyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
