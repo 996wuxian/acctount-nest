@@ -9,6 +9,7 @@ import { ExportModule } from './export/export.module';
 import { RecordReviewModule } from './record-review/record-review.module';
 import { FoodReviewModule } from './food-review/food-review.module';
 import { MemberApplyModule } from './member-apply/member-apply.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { MemberApplyModule } from './member-apply/member-apply.module';
     RecordReviewModule,
     FoodReviewModule,
     MemberApplyModule,
+    LeaderboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
