@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'tinyint', default: false })
   isVip: boolean;
 
+  @Column({ type: 'tinyint', default: false })
+  isJbVip: boolean;
+
   @Column({ type: 'int', default: 0 })
   loginCount: number;
 

@@ -383,6 +383,7 @@ export class UserController {
           example: 'https://example.com/avatar.png',
         },
         isVip: { type: 'boolean', example: false },
+        isJbVip: { type: 'boolean', example: false },
         chatNum: { type: 'integer', example: 0 },
         registerTime: {
           type: 'string',

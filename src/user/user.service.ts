@@ -39,6 +39,7 @@ export class UserService {
       nickname: createUserDto.nickname,
       password: createUserDto.password,
       isVip: false,
+      isJbVip: false,
       ip: ipSafe,
     });
 
