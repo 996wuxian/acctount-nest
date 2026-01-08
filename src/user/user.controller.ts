@@ -16,11 +16,15 @@ import {
   ParseIntPipe,
   UnauthorizedException,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
+import { ReplyInvitationDto } from './dto/reply-invitation.dto';
+import { JwtAuthGuard } from '../core/jwt-auth.guard';
 import { Request } from 'express';
 import * as path from 'path';
 import { existsSync, readFileSync } from 'fs';
@@ -32,6 +36,7 @@ import {
   ApiOkResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 
 @Controller('user')
@@ -396,6 +401,50 @@ export class UserController {
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   login(@Body() dto: LoginUserDto) {
     return this.userService.login(dto);
+  }
+
+  @Post('relation/invite')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '邀请用户建立美食关联' })
+  @ApiBody({ type: InviteUserDto })
+  @ApiOkResponse({ description: '邀请发送成功' })
+  inviteUser(@Req() req: any, @Body() dto: InviteUserDto) {
+    const userId = req.user.sub;
+    return this.userService.inviteUser(userId, dto);
+  }
+
+  @Get('relation/received')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '查询我收到的邀请' })
+  @ApiOkResponse({ description: '返回收到的邀请列表' })
+  getReceivedInvitations(@Req() req: any) {
+    const userId = req.user.sub;
+    return this.userService.getReceivedInvitations(userId);
+  }
+
+  @Get('relation/sent')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '查询我发送的邀请' })
+  @ApiOkResponse({ description: '返回发送的邀请列表' })
+  getSentInvitations(@Req() req: any) {
+    const userId = req.user.sub;
+    return this.userService.getSentInvitations(userId);
+  }
+
+  @Post('relation/respond')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '回复邀请（同意/拒绝）' })
+  @ApiBody({ type: ReplyInvitationDto })
+  @ApiOkResponse({ description: '操作成功' })
+  replyInvitation(@Req() req: any, @Body() dto: ReplyInvitationDto) {
+    const userId = req.user.sub;
+    return this.userService.replyInvitation(userId, dto);
   }
 
   @Get()

@@ -10,13 +10,21 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import {
+  UserRelation,
+  UserRelationStatus,
+} from './entities/user-relation.entity';
 import { JwtService } from '@nestjs/jwt';
 import { LoginUserDto } from './dto/login-user.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
+import { ReplyInvitationDto } from './dto/reply-invitation.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(UserRelation)
+    private readonly relationRepo: Repository<UserRelation>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -163,5 +171,80 @@ export class UserService {
     const next = Math.max(0, (user.loginCount ?? 0) - 1);
     await this.userRepo.update({ id: user.id }, { loginCount: next });
     return { account: acc, loginCount: next };
+  }
+
+  async inviteUser(inviterId: number, dto: InviteUserDto) {
+    const targetAccount = Number(dto.account);
+    const targetUser = await this.userRepo.findOne({
+      where: { account: targetAccount },
+    });
+    if (!targetUser) {
+      throw new NotFoundException('目标用户不存在');
+    }
+    if (targetUser.id === inviterId) {
+      throw new HttpException('不能邀请自己', HttpStatus.BAD_REQUEST);
+    }
+
+    const existing = await this.relationRepo.findOne({
+      where: [
+        { inviterId, inviteeId: targetUser.id },
+        { inviterId: targetUser.id, inviteeId: inviterId },
+      ],
+    });
+
+    if (existing) {
+      if (existing.status === UserRelationStatus.ACCEPTED) {
+        throw new HttpException('已经是好友关系', HttpStatus.BAD_REQUEST);
+      }
+      if (existing.status === UserRelationStatus.PENDING) {
+        throw new HttpException(
+          '邀请已发送或对方已邀请您',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      // Re-activate rejected invitation
+      existing.status = UserRelationStatus.PENDING;
+      existing.inviterId = inviterId;
+      existing.inviteeId = targetUser.id;
+      return await this.relationRepo.save(existing);
+    }
+
+    const relation = this.relationRepo.create({
+      inviterId,
+      inviteeId: targetUser.id,
+      status: UserRelationStatus.PENDING,
+    });
+    return await this.relationRepo.save(relation);
+  }
+
+  async getReceivedInvitations(userId: number) {
+    return await this.relationRepo.find({
+      where: { inviteeId: userId },
+      relations: ['inviter'],
+      order: { createTime: 'DESC' },
+    });
+  }
+
+  async getSentInvitations(userId: number) {
+    return await this.relationRepo.find({
+      where: { inviterId: userId },
+      relations: ['invitee'],
+      order: { createTime: 'DESC' },
+    });
+  }
+
+  async replyInvitation(userId: number, dto: ReplyInvitationDto) {
+    const relation = await this.relationRepo.findOne({
+      where: { id: dto.relationId, inviteeId: userId },
+    });
+    if (!relation) {
+      throw new NotFoundException('邀请记录不存在');
+    }
+    if (relation.status !== UserRelationStatus.PENDING) {
+      throw new HttpException('该邀请已被处理', HttpStatus.BAD_REQUEST);
+    }
+
+    relation.status = dto.status;
+    return await this.relationRepo.save(relation);
   }
 }
