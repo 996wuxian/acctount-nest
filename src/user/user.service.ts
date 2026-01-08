@@ -234,6 +234,22 @@ export class UserService {
   }
 
   async replyInvitation(userId: number, dto: ReplyInvitationDto) {
+    // Check if user already has an accepted relation before accepting
+    if (dto.status === UserRelationStatus.ACCEPTED) {
+      const myRelation = await this.relationRepo.findOne({
+        where: [
+          { inviterId: userId, status: UserRelationStatus.ACCEPTED },
+          { inviteeId: userId, status: UserRelationStatus.ACCEPTED },
+        ],
+      });
+      if (myRelation) {
+        throw new HttpException(
+          '您已有关联用户，不能接受邀请',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
     const relation = await this.relationRepo.findOne({
       where: { id: dto.relationId, inviteeId: userId },
     });
@@ -244,7 +260,52 @@ export class UserService {
       throw new HttpException('该邀请已被处理', HttpStatus.BAD_REQUEST);
     }
 
+    // Double check if the inviter has an accepted relation
+    if (dto.status === UserRelationStatus.ACCEPTED) {
+      const inviterRelation = await this.relationRepo.findOne({
+        where: [
+          {
+            inviterId: relation.inviterId,
+            status: UserRelationStatus.ACCEPTED,
+          },
+          {
+            inviteeId: relation.inviterId,
+            status: UserRelationStatus.ACCEPTED,
+          },
+        ],
+      });
+      if (inviterRelation) {
+        throw new HttpException(
+          '对方已有关联用户，无法建立关联',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
     relation.status = dto.status;
     return await this.relationRepo.save(relation);
+  }
+
+  async removeRelation(userId: number, relationId: number) {
+    const relation = await this.relationRepo.findOne({
+      where: [
+        {
+          id: relationId,
+          inviterId: userId,
+          status: UserRelationStatus.ACCEPTED,
+        },
+        {
+          id: relationId,
+          inviteeId: userId,
+          status: UserRelationStatus.ACCEPTED,
+        },
+      ],
+    });
+
+    if (!relation) {
+      throw new NotFoundException('关联关系不存在');
+    }
+
+    return await this.relationRepo.remove(relation);
   }
 }

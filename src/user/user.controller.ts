@@ -447,6 +447,17 @@ export class UserController {
     return this.userService.replyInvitation(userId, dto);
   }
 
+  @Delete('relation/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '解除关联关系' })
+  @ApiParam({ name: 'id', description: '关联记录ID', example: 1 })
+  @ApiOkResponse({ description: '解除成功' })
+  removeRelation(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    const userId = req.user.sub;
+    return this.userService.removeRelation(userId, id);
+  }
+
   @Get()
   @ApiOperation({ summary: '获取所有用户' })
   @ApiOkResponse({ description: '返回用户列表' })
