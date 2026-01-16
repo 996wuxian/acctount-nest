@@ -193,17 +193,17 @@ export class UserService {
     });
 
     if (existing) {
-      if (existing.status === UserRelationStatus.ACCEPTED) {
+      if (Number(existing.status) === UserRelationStatus.ACCEPTED) {
         throw new HttpException('已经是好友关系', HttpStatus.BAD_REQUEST);
       }
-      if (existing.status === UserRelationStatus.PENDING) {
+      if (Number(existing.status) === UserRelationStatus.PENDING) {
         throw new HttpException(
           '邀请已发送或对方已邀请您',
           HttpStatus.BAD_REQUEST,
         );
       }
       // Re-activate rejected invitation
-      existing.status = UserRelationStatus.PENDING;
+      existing.status = String(UserRelationStatus.PENDING) as any;
       existing.inviterId = inviterId;
       existing.inviteeId = targetUser.id;
       return await this.relationRepo.save(existing);
@@ -212,7 +212,7 @@ export class UserService {
     const relation = this.relationRepo.create({
       inviterId,
       inviteeId: targetUser.id,
-      status: UserRelationStatus.PENDING,
+      status: String(UserRelationStatus.PENDING) as any,
     });
     return await this.relationRepo.save(relation);
   }
@@ -238,8 +238,14 @@ export class UserService {
     if (dto.status === UserRelationStatus.ACCEPTED) {
       const myRelation = await this.relationRepo.findOne({
         where: [
-          { inviterId: userId, status: UserRelationStatus.ACCEPTED },
-          { inviteeId: userId, status: UserRelationStatus.ACCEPTED },
+          {
+            inviterId: userId,
+            status: String(UserRelationStatus.ACCEPTED) as any,
+          },
+          {
+            inviteeId: userId,
+            status: String(UserRelationStatus.ACCEPTED) as any,
+          },
         ],
       });
       if (myRelation) {
@@ -256,7 +262,7 @@ export class UserService {
     if (!relation) {
       throw new NotFoundException('邀请记录不存在');
     }
-    if (relation.status !== UserRelationStatus.PENDING) {
+    if (Number(relation.status) !== UserRelationStatus.PENDING) {
       throw new HttpException('该邀请已被处理', HttpStatus.BAD_REQUEST);
     }
 
@@ -266,11 +272,11 @@ export class UserService {
         where: [
           {
             inviterId: relation.inviterId,
-            status: UserRelationStatus.ACCEPTED,
+            status: String(UserRelationStatus.ACCEPTED) as any,
           },
           {
             inviteeId: relation.inviterId,
-            status: UserRelationStatus.ACCEPTED,
+            status: String(UserRelationStatus.ACCEPTED) as any,
           },
         ],
       });
@@ -282,7 +288,7 @@ export class UserService {
       }
     }
 
-    relation.status = dto.status;
+    relation.status = String(dto.status) as any;
     return await this.relationRepo.save(relation);
   }
 
@@ -292,12 +298,12 @@ export class UserService {
         {
           id: relationId,
           inviterId: userId,
-          status: UserRelationStatus.ACCEPTED,
+          status: String(UserRelationStatus.ACCEPTED) as any,
         },
         {
           id: relationId,
           inviteeId: userId,
-          status: UserRelationStatus.ACCEPTED,
+          status: String(UserRelationStatus.ACCEPTED) as any,
         },
       ],
     });
