@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
@@ -233,6 +234,14 @@ export class UserService {
     });
   }
 
+  async getMyRelations(userId: number) {
+    return await this.relationRepo.find({
+      where: [{ inviterId: userId }, { inviteeId: userId }],
+      relations: ['inviter', 'invitee'],
+      order: { createTime: 'DESC' },
+    });
+  }
+
   async replyInvitation(userId: number, dto: ReplyInvitationDto) {
     // Check if user already has an accepted relation before accepting
     if (dto.status === UserRelationStatus.ACCEPTED) {
@@ -298,12 +307,10 @@ export class UserService {
         {
           id: relationId,
           inviterId: userId,
-          status: String(UserRelationStatus.ACCEPTED) as any,
         },
         {
           id: relationId,
           inviteeId: userId,
-          status: String(UserRelationStatus.ACCEPTED) as any,
         },
       ],
     });
@@ -313,5 +320,81 @@ export class UserService {
     }
 
     return await this.relationRepo.remove(relation);
+  }
+
+  async syncInviterFood(userId: number, foods: any[]) {
+    if (!Array.isArray(foods)) {
+      throw new BadRequestException('食物数组格式不正确');
+    }
+    const normalized = foods
+      .slice(0, 100)
+      .map((v) => ({
+        type: String((v as any)?.type ?? '').trim(),
+        name: String((v as any)?.name ?? '').trim(),
+        last_time: String((v as any)?.last_time ?? '').trim(),
+      }))
+      .filter((v) => v.type && v.name);
+    const relation =
+      (await this.relationRepo.findOne({
+        where: [
+          {
+            inviterId: userId,
+            status: String(UserRelationStatus.ACCEPTED) as any,
+          },
+        ],
+        order: { createTime: 'DESC' },
+      })) ??
+      (await this.relationRepo.findOne({
+        where: [
+          {
+            inviterId: userId,
+            status: String(UserRelationStatus.PENDING) as any,
+          },
+        ],
+        order: { createTime: 'DESC' },
+      }));
+    if (!relation) {
+      throw new NotFoundException('没有待同步的邀请记录');
+    }
+    relation.inviterFood = normalized;
+    return await this.relationRepo.save(relation);
+  }
+
+  async syncInviteeFood(userId: number, foods: any[]) {
+    if (!Array.isArray(foods)) {
+      throw new BadRequestException('食物数组格式不正确');
+    }
+    const normalized = foods
+      .slice(0, 100)
+      .map((v) => ({
+        type: String((v as any)?.type ?? '').trim(),
+        name: String((v as any)?.name ?? '').trim(),
+        last_time: String((v as any)?.last_time ?? '').trim(),
+      }))
+      .filter((v) => v.type && v.name);
+    const relation =
+      (await this.relationRepo.findOne({
+        where: [
+          {
+            inviteeId: userId,
+            status: String(UserRelationStatus.ACCEPTED) as any,
+          },
+        ],
+        order: { createTime: 'DESC' },
+      })) ??
+      (await this.relationRepo.findOne({
+        where: [
+          {
+            inviteeId: userId,
+            status: String(UserRelationStatus.PENDING) as any,
+          },
+        ],
+        order: { createTime: 'DESC' },
+      }));
+    if (!relation) {
+      throw new NotFoundException('没有待同步的邀请记录');
+    }
+    relation.inviteeFood = normalized;
+    return await this.relationRepo.save(relation);
   }
 }

@@ -47,4 +47,18 @@ export class UserRelation {
 
   @UpdateDateColumn({ name: 'update_time' })
   updateTime: Date;
+
+  @Column({
+    type: 'simple-json',
+    name: 'inviter_food',
+    nullable: true,
+  })
+  inviterFood?: any[] | null;
+
+  @Column({
+    type: 'simple-json',
+    name: 'invitee_food',
+    nullable: true,
+  })
+  inviteeFood?: any[] | null;
 }

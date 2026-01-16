@@ -435,6 +435,16 @@ export class UserController {
     return this.userService.getSentInvitations(userId);
   }
 
+  @Get('relation')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '查询我的邀请与被邀请（合并）' })
+  @ApiOkResponse({ description: '返回我的所有相关邀请' })
+  getMyRelations(@Req() req: any) {
+    const userId = req.user.sub;
+    return this.userService.getMyRelations(userId);
+  }
+
   @Post('relation/respond')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -445,6 +455,64 @@ export class UserController {
   replyInvitation(@Req() req: any, @Body() dto: ReplyInvitationDto) {
     const userId = req.user.sub;
     return this.userService.replyInvitation(userId, dto);
+  }
+
+  @Post('relation/sync-inviter-food')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '同步邀请者食物' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        foods: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              name: { type: 'string' },
+              last_time: { type: 'string' },
+            },
+          },
+        },
+      },
+      required: ['foods'],
+    },
+  })
+  syncInviterFood(@Req() req: any, @Body() body: { foods: any[] }) {
+    const userId = req.user.sub;
+    return this.userService.syncInviterFood(userId, body.foods);
+  }
+
+  @Post('relation/sync-invitee-food')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '同步被邀请者食物' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        foods: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              name: { type: 'string' },
+              last_time: { type: 'string' },
+            },
+          },
+        },
+      },
+      required: ['foods'],
+    },
+  })
+  syncInviteeFood(@Req() req: any, @Body() body: { foods: any[] }) {
+    const userId = req.user.sub;
+    return this.userService.syncInviteeFood(userId, body.foods);
   }
 
   @Delete('relation/:id')
