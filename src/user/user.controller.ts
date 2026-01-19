@@ -515,6 +515,35 @@ export class UserController {
     return this.userService.syncInviteeFood(userId, body.foods);
   }
 
+  @Post('relation/sync-selected-food')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '同步当前角色的已选择食物' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        foods: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              name: { type: 'string' },
+              last_time: { type: 'string' },
+            },
+          },
+        },
+      },
+      required: ['foods'],
+    },
+  })
+  syncSelectedFood(@Req() req: any, @Body() body: { foods: any[] }) {
+    const userId = req.user.sub;
+    return this.userService.syncSelectedFood(userId, body.foods);
+  }
+
   @Delete('relation/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

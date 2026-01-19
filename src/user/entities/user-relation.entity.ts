@@ -61,4 +61,18 @@ export class UserRelation {
     nullable: true,
   })
   inviteeFood?: any[] | null;
+
+  @Column({
+    type: 'simple-json',
+    name: 'inviter_selected_food',
+    nullable: true,
+  })
+  inviterSelectedFood?: any[] | null;
+
+  @Column({
+    type: 'simple-json',
+    name: 'invitee_selected_food',
+    nullable: true,
+  })
+  inviteeSelectedFood?: any[] | null;
 }
